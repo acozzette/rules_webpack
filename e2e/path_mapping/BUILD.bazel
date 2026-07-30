@@ -6,13 +6,13 @@ npm_link_all_packages(name = "node_modules")
 
 webpack_bundle(
     name = "bundle",
-    entry_point = "module.js",
-    node_modules = "//:node_modules",
+    configure_devtool = False,
     # configure_mode/configure_devtool bake the Bazel compilation mode into the action's
     # environment, which would legitimately differ between -c fastbuild and -c opt and defeat
     # the point of this test. See test.sh for why use_execroot_entry_point is also disabled.
     configure_mode = False,
-    configure_devtool = False,
+    entry_point = "module.js",
+    node_modules = "//:node_modules",
     use_execroot_entry_point = False,
 )
 
