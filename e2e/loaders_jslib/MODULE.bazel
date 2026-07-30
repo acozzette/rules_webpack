@@ -7,6 +7,12 @@ local_path_override(
 bazel_dep(name = "aspect_rules_js", version = "3.2.1", dev_dependency = True)
 bazel_dep(name = "bazel_skylib", version = "1.5.0", dev_dependency = True)
 
+git_override(
+    module_name = "aspect_rules_js",
+    commit = "9b0e44e7e4fd9297cfd7fb0a41206ee0b4af2dcd",
+    remote = "https://github.com/aspect-build/rules_js.git",
+)
+
 npm = use_extension("@aspect_rules_js//npm:extensions.bzl", "npm", dev_dependency = True)
 npm.npm_translate_lock(
     name = "npm",
