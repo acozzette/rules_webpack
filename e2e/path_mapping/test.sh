@@ -24,6 +24,12 @@ set -o errexit -o nounset -o pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
+# Forward any arguments given to this script to every bazel invocation below.
+script_args=("$@")
+bazel() {
+    command bazel "$@" "${script_args[@]}"
+}
+
 scratch="$(mktemp -d)"
 trap 'rm -rf "$scratch"' EXIT
 disk_cache="$scratch/disk_cache"
