@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Proves a few things about webpack_bundle's `supports-path-mapping` execution requirement
-# (webpack/private/webpack_bundle.bzl):
+# Proves a few things about webpack_bundle's `supports-path-mapping` execution
+# requirement (webpack/private/webpack_bundle.bzl):
 #
-# 1. It lets Bazel's path mapping share a single cached action between two builds that
-#    differ only in compilation mode.
+# 1. It lets Bazel's path mapping share a single cached action between two
+#    builds that differ only in compilation mode.
 # 2. It is advertised in the ordinary case.
-# 3. It is not advertised when doing so would be unsafe, i.e. when a location expansion in
-#    `env` produced a real, non-path-mapped path.
+# 3. It is not advertised when doing so would be unsafe, i.e. when a location
+#    expansion in `env` produced a real, non-path-mapped path.
 #
 # A shared --disk_cache is required: -c opt and -c fastbuild are different
 # configurations, so each gets its own action instance the first time Bazel
