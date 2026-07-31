@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
-# Proves that webpack_bundle's `supports-path-mapping` execution requirement
-# (webpack/private/webpack_bundle.bzl) lets Bazel's path mapping share a single
-# cached action between two builds that differ only in compilation mode.
+# Proves a few things about webpack_bundle's `supports-path-mapping` execution requirement
+# (webpack/private/webpack_bundle.bzl):
+#
+# 1. It lets Bazel's path mapping share a single cached action between two builds that
+#    differ only in compilation mode.
+# 2. It is advertised in the ordinary case.
+# 3. It is not advertised when doing so would be unsafe, i.e. when a location expansion in
+#    `env` produced a real, non-path-mapped path.
 #
 # A shared --disk_cache is required: -c opt and -c fastbuild are different
 # configurations, so each gets its own action instance the first time Bazel
@@ -54,3 +59,26 @@ if [ "$cache_hit" != "true" ]; then
 fi
 
 echo "PASS: action was cache-shared across -c fastbuild and -c opt"
+
+# We should find via bazel aquery that the action advertises path-mapping
+# support.
+aquery_output="$(bazel aquery 'mnemonic("Webpack", //:bundle)')"
+if ! echo "$aquery_output" | grep -q "supports-path-mapping"; then
+    echo "FAIL: supports-path-mapping was not advertised for //:bundle" >&2
+    echo "$aquery_output" >&2
+    exit 1
+fi
+
+echo "PASS: supports-path-mapping is advertised for //:bundle"
+
+# A location expansion in `env` (e.g. $(execpath ...)) can produce a real,
+# config-specific path that isn't safe under path mapping, so webpack_bundle
+# must not advertise support for it in that case.
+aquery_output="$(bazel aquery 'mnemonic("Webpack", //:bundle_with_location_expansion)')"
+if echo "$aquery_output" | grep -q "supports-path-mapping"; then
+    echo "FAIL: supports-path-mapping was advertised even though env used a location expansion" >&2
+    echo "$aquery_output" >&2
+    exit 1
+fi
+
+echo "PASS: path mapping is not advertised when env uses a location expansion"
