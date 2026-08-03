@@ -1,7 +1,7 @@
 """Webpack bundle producing rule definition."""
 
 load("@aspect_rules_js//js:defs.bzl", "js_binary")
-load("@aspect_rules_js//js:libs.bzl", "js_lib_helpers", "js_run_binary_action")
+load("@aspect_rules_js//js:libs.bzl", "js_binary_lib", "js_lib_helpers")
 load("@aspect_rules_js//js:providers.bzl", "JsInfo", "js_info")
 load("@bazel_lib//lib:copy_file.bzl", "copy_file")
 load("@bazel_lib//lib:copy_to_bin.bzl", "COPY_FILE_TO_BIN_TOOLCHAINS", "copy_files_to_bin_actions")
@@ -198,7 +198,7 @@ def _impl(ctx):
         )],
     )
 
-    js_run_binary_action(
+    js_binary_lib.run_binary_action(
         ctx = ctx,
         progress_message = "Running Webpack [Webpack]",
         executable = executable,
