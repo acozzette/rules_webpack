@@ -1,7 +1,7 @@
 """Webpack bundle producing rule definition."""
 
 load("@aspect_rules_js//js:defs.bzl", "js_binary")
-load("@aspect_rules_js//js:libs.bzl", "js_lib_helpers")
+load("@aspect_rules_js//js:libs.bzl", "js_binary_lib", "js_lib_helpers")
 load("@aspect_rules_js//js:providers.bzl", "JsInfo", "js_info")
 load("@bazel_lib//lib:copy_file.bzl", "copy_file")
 load("@bazel_lib//lib:copy_to_bin.bzl", "COPY_FILE_TO_BIN_TOOLCHAINS", "copy_files_to_bin_actions")
@@ -109,19 +109,30 @@ def _impl(ctx):
         # trim suffix "bundle.js" so that webpack is given a directory to write into
         args.add_all(["--output-path", paths.dirname(_relpath(ctx, output_sources[0]))])
 
-    env = {
-        "BAZEL_BINDIR": ctx.bin_dir.path,
-    }
+    env = {}
+
+    # Read this environment variable so that tests can use it to invalidate the
+    # build action.
+    invalidate = ctx.configuration.default_shell_env.get("WEBPACK_BUNDLE_PATH_MAPPING_TEST_INVALIDATE")
+    if invalidate != None:
+        env["WEBPACK_BUNDLE_PATH_MAPPING_TEST_INVALIDATE"] = invalidate
+
     if ctx.attr.use_execroot_entry_point:
         env["JS_BINARY__USE_EXECROOT_ENTRY_POINT"] = "1"
     if ctx.attr.chdir:
         env["JS_BINARY__CHDIR"] = ctx.attr.chdir
     entry_points_srcs = ctx.attr.entry_points.keys()
+
+    # Location and Make variable expansion can reference paths that aren't path mapped, so we can
+    # only use path mapping if none of the `env` values actually expanded to something different.
+    can_path_map = True
     for (key, value) in ctx.attr.env.items():
-        env[key] = " ".join([
+        expanded = " ".join([
             expand_variables(ctx, exp, attribute_name = "env")
             for exp in expand_locations(ctx, value, entry_points_srcs + ctx.attr.srcs + ctx.attr.deps + ctx.attr.data).split(" ")
         ])
+        can_path_map = can_path_map and expanded == value
+        env[key] = expanded
 
     compilation_mode = ctx.var["COMPILATION_MODE"]
     if ctx.attr.configure_mode:
@@ -137,6 +148,8 @@ def _impl(ctx):
 
     executable = ctx.executable.webpack_exec_cfg
     execution_requirements = {}
+    if can_path_map:
+        execution_requirements["supports-path-mapping"] = "1"
 
     no_copy_bin_inputs = []
     if ctx.attr.supports_workers:
@@ -185,7 +198,8 @@ def _impl(ctx):
         )],
     )
 
-    ctx.actions.run(
+    js_binary_lib.run_binary_action(
+        ctx = ctx,
         progress_message = "Running Webpack [Webpack]",
         executable = executable,
         inputs = inputs,
